@@ -9,7 +9,6 @@ Releases are pushed as Docker images in the [public Docker registry](https://reg
 You can run mint by starting it with Docker:
 
     $ docker run -it stups/mint-storage
-    $ docker run -it stups/mint-worker
 
 ## Requirements
 
@@ -44,28 +43,6 @@ $ docker run -it \
     stups/mint-storage
 ```
 
-### Mint Worker
-
-Variable                | Mandatory? | Default                 | Description
------------------------ | ---------- | ----------------------- | -----------
-OAUTH2_ACCESS_TOKEN_URL | yes        |                         | URL of the `/access_token` endpoint of the authorization server (to retrieve OAuth tokens)
-JOBS_KIO_URL            | yes        |                         | URL to [Kio](https://github.com/zalando-stups/kio). Used to verify applications.
-JOBS_SERVICE_USER_URL   | yes        |                         | URL to Service User API
-JOBS_MINT_STORAGE_URL   | yes        |                         | URL to Mint storage
-JOBS_ESSENTIALS_URL     | yes        |                         | URL of [essentials](https://github.com/zalando-stups/essentials). Used to verify scopes.
-
-Example:
-
-~~~
-$ docker run -it \
-    -e OAUTH2_ACCESS_TOKEN_URL="https://auth-example.com/access_token" \
-    -e JOBS_KIO_URL="https://kio.example.com" \
-    -e JOBS_SERVICE_USER_URL="https://service-user.example.com" \
-    -e JOBS_MINT_STORAGE_URL="https://mint.example.com" \
-    -e JOBS_ESSENTIALS_URL="https://essentials.example.com" \
-    stups/mint-storage
-~~~
-
 ## Building
 
     $ lein do uberjar, scm-source, docker build
@@ -76,7 +53,7 @@ $ docker run -it \
 
 ## Developing
 
-Kio embeds the [reloaded](http://thinkrelevance.com/blog/2013/06/04/clojure-workflow-reloaded) workflow for interactive
+Mint embeds the [reloaded](http://thinkrelevance.com/blog/2013/06/04/clojure-workflow-reloaded) workflow for interactive
 development:
 
     $ lein repl
