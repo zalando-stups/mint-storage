@@ -1,7 +1,7 @@
 swagger: '2.0'
 
 info:
-  title: mint API
+  title: mint-storage API
   version: '0.1'
   description: mint is STUPS' secret rotator and distributor.
 
