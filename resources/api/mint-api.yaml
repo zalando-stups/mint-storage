@@ -243,6 +243,22 @@ paths:
         default:
           $ref: '#/responses/Error'
 
+  '/apps/{application_id}/renew':
+    post:
+      summary: renew credentials of application
+      description: |
+        Renews both client and user credentials of the application.
+      tags:
+        - Application
+      operationId: org.zalando.stups.mint.storage.api/renew-credentials!
+      parameters:
+        - $ref: '#/parameters/ApplicationID'
+      responses:
+        200:
+          description: renewal issued
+        default:
+          $ref: '#/responses/Error'
+
 parameters:
   ApplicationID:
     name: application_id
