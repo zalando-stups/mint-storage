@@ -243,9 +243,9 @@ paths:
         default:
           $ref: '#/responses/Error'
 
-  '/apps/{application_id}/renew':
+  '/apps/{application_id}/renewal':
     post:
-      summary: renew credentials of application
+      summary: issue a renewal of the application's credentials
       description: |
         Renews both client and user credentials of the application.
       tags:
