@@ -78,3 +78,10 @@ DELETE FROM zm_data.scope
  WHERE s_application_id = :application_id
    AND s_resource_type_id = :resource_type_id
    AND s_scope_id = :scope_id
+
+-- name: renew-credentials!
+UPDATE zm_data.application
+   SET a_last_password_rotation = NULL,
+       a_last_client_rotation = NULL,
+       a_last_modified = NOW()
+ WHERE a_id = :application_id;

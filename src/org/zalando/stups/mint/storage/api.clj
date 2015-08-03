@@ -238,3 +238,12 @@
       (do (log/info "Deleted application %s." application_id)
           (response nil))
       (not-found nil))))
+
+(defn renew-credentials!
+  "Issues an update of client and user credentials."
+  [{:keys [application_id]} _ db _]
+  (if (load-application application_id db)
+      (do (sql/cmd-renew-credentials! {:application_id application_id} {:connection db})
+          (log/info "Issued renewal of credentials for %s" application_id)
+          (response nil))
+      (not-found nil)))
