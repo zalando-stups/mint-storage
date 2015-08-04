@@ -112,6 +112,7 @@
                                 :last_modified
                                 :last_synced
                                 :has_problems
+                                :message
                                 :redirect_url
                                 :is_client_confidential
                                 :s3_buckets
@@ -219,13 +220,13 @@
   [{:keys [application_id status]} _ db _]
   (log/debug "Update application status %s ..." application_id)
   (if (pos? (sql/cmd-update-application-status! {:application_id         application_id
-                                             :client_id              (:client_id status)
-                                             :last_password_rotation (to-sql-time (:last_password_rotation status))
-                                             :last_client_rotation   (to-sql-time (:last_client_rotation status))
-                                             :last_synced            (to-sql-time (:last_synced status))
-                                             :message                (:message status)
-                                             :has_problems           (:has_problems status)}
-                                            {:connection db}))
+                                                 :client_id              (:client_id status)
+                                                 :last_password_rotation (to-sql-time (:last_password_rotation status))
+                                                 :last_client_rotation   (to-sql-time (:last_client_rotation status))
+                                                 :last_synced            (to-sql-time (:last_synced status))
+                                                 :message                (:message status)
+                                                 :has_problems           (:has_problems status)}
+                                                {:connection db}))
     (do (log/info "Updated application status %s with %s." application_id status)
         (response nil))
     (not-found nil)))
