@@ -4,7 +4,8 @@ SELECT a_id,
        a_last_client_rotation,
        a_last_modified,
        a_last_synced,
-       a_has_problems
+       a_has_problems,
+       a_message
   FROM zm_data.application
  ORDER BY a_id;
 
@@ -15,7 +16,8 @@ SELECT DISTINCT
        a_last_client_rotation,
        a_last_modified,
        a_last_synced,
-       a_has_problems
+       a_has_problems,
+       a_message
   FROM zm_data.application
   JOIN zm_data.scope ON s_application_id = a_id
  WHERE s_resource_type_id = COALESCE(:resource_type_id, s_resource_type_id)
@@ -37,6 +39,7 @@ SELECT a_id,
        a_last_modified,
        a_last_synced,
        a_has_problems,
+       a_message,
        a_s3_buckets,
        a_is_client_confidential
   FROM zm_data.application
@@ -56,7 +59,8 @@ UPDATE zm_data.application
        a_last_password_rotation = COALESCE(:last_password_rotation, a_last_password_rotation),
        a_last_client_rotation = COALESCE(:last_client_rotation, a_last_client_rotation),
        a_last_synced = COALESCE(:last_synced, a_last_synced),
-       a_has_problems = COALESCE(:has_problems, a_has_problems)
+       a_has_problems = COALESCE(:has_problems, a_has_problems),
+       a_message = COALESCE(:message, a_message)
  WHERE a_id = :application_id;
 
 -- name: delete-application!

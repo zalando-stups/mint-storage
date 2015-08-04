@@ -80,6 +80,10 @@ paths:
                   type: boolean
                   description: Indicates, if an error occurred during the last sync
                   example: false
+                message:
+                  type: string
+                  description: Error message from mint-worker
+                  example: Access to bucket xyz denied
               required:
                 - id
                 - has_problems
@@ -139,6 +143,10 @@ paths:
                 type: boolean
                 description: Indicates, if an error occurred during the last sync
                 example: false
+              message:
+                type: string
+                description: Error message from mint-worker
+                example: Access to bucket xyz denied
               redirect_url:
                 type: string
                 description: |
@@ -351,6 +359,10 @@ definitions:
         type: boolean
         description: Indicates, if an error occurred during the last sync
         example: false
+      message:
+        type: string
+        description: Error message from mint-worker
+        example: Access to bucket xyz denied
 
 securityDefinitions:
   oauth2:
