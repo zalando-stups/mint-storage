@@ -223,6 +223,7 @@
                                              :last_password_rotation (to-sql-time (:last_password_rotation status))
                                              :last_client_rotation   (to-sql-time (:last_client_rotation status))
                                              :last_synced            (to-sql-time (:last_synced status))
+                                             :message                (:message status)
                                              :has_problems           (:has_problems status)}
                                             {:connection db}))
     (do (log/info "Updated application status %s with %s." application_id status)
