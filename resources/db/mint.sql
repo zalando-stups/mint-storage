@@ -58,7 +58,7 @@ UPDATE zm_data.application
        a_last_client_rotation = COALESCE(:last_client_rotation, a_last_client_rotation),
        a_last_synced = COALESCE(:last_synced, a_last_synced),
        a_has_problems = COALESCE(:has_problems, a_has_problems),
-       a_message = COALESCE(:message, a_message)
+       a_message = :message -- do not COALESCE here because we might set it to NULL
  WHERE a_id = :application_id;
 
 -- name: delete-application!
