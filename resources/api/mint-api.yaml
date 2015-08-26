@@ -147,6 +147,10 @@ paths:
                 type: string
                 description: Error message from mint-worker
                 example: Access to bucket xyz denied
+              s3_errors:
+                type: integer
+                description: How many times mint tried to put credentials in a bucket and failed
+                example: 2
               redirect_url:
                 type: string
                 description: |
@@ -363,6 +367,10 @@ definitions:
         type: string
         description: Error message from mint-worker
         example: Access to bucket xyz denied
+      s3_errors:
+        type: integer
+        description: How many times mint tried to put credentials in a bucket and failed
+        example: 2
 
 securityDefinitions:
   oauth2:

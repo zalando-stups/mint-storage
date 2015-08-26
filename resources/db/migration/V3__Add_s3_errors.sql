@@ -1,0 +1,2 @@
+ALTER TABLE zm_data.application
+ ADD COLUMN a_s3_errors SMALLINT NOT NULL DEFAULT 0;
