@@ -5,7 +5,8 @@ SELECT a_id,
        a_last_modified,
        a_last_synced,
        a_has_problems,
-       a_message
+       a_message,
+       a_s3_errors
   FROM zm_data.application
  ORDER BY a_id;
 
