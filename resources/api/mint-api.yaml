@@ -84,10 +84,15 @@ paths:
                   type: string
                   description: Error message from mint-worker
                   example: Access to bucket xyz denied
+                s3_errors:
+                  type: integer
+                  description: How many times mint tried to put credentials in a bucket and failed
+                  example: 2
               required:
                 - id
                 - has_problems
                 - last_modified
+                - s3_errors
         default:
           $ref: '#/responses/Error'
 
