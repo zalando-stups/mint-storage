@@ -115,6 +115,7 @@
                                 :message
                                 :redirect_url
                                 :is_client_confidential
+                                :s3_errors
                                 :s3_buckets
                                 :scopes])]
       (log/debug "Found application %s with %s." application_id app)
@@ -225,7 +226,8 @@
                                                  :last_client_rotation   (to-sql-time (:last_client_rotation status))
                                                  :last_synced            (to-sql-time (:last_synced status))
                                                  :message                (:message status)
-                                                 :has_problems           (:has_problems status)}
+                                                 :has_problems           (:has_problems status)
+                                                 :s3_errors              (:s3_errors status)}
                                                 {:connection db}))
     (do (log/info "Updated application status %s with %s." application_id status)
         (response nil))

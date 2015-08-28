@@ -5,7 +5,8 @@ SELECT a_id,
        a_last_modified,
        a_last_synced,
        a_has_problems,
-       a_message
+       a_message,
+       a_s3_errors
   FROM zm_data.application
  ORDER BY a_id;
 
@@ -41,7 +42,8 @@ SELECT a_id,
        a_has_problems,
        a_message,
        a_s3_buckets,
-       a_is_client_confidential
+       a_is_client_confidential,
+       a_s3_errors
   FROM zm_data.application
  WHERE a_id = :application_id;
 
@@ -60,7 +62,8 @@ UPDATE zm_data.application
        a_last_client_rotation = COALESCE(:last_client_rotation, a_last_client_rotation),
        a_last_synced = COALESCE(:last_synced, a_last_synced),
        a_has_problems = COALESCE(:has_problems, a_has_problems),
-       a_message = COALESCE(:message, a_message)
+       a_message = COALESCE(:message, a_message),
+       a_s3_errors = COALESCE(:s3_errors, a_s3_errors)
  WHERE a_id = :application_id;
 
 -- name: delete-application!
@@ -87,5 +90,6 @@ DELETE FROM zm_data.scope
 UPDATE zm_data.application
    SET a_last_password_rotation = NULL,
        a_last_client_rotation = NULL,
-       a_last_modified = NOW()
+       a_last_modified = NOW(),
+       a_s3_errors = 0
  WHERE a_id = :application_id;
