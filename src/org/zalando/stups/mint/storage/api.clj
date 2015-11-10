@@ -23,7 +23,6 @@
             [org.zalando.stups.mint.storage.external.scopes :refer [get-scope]]
             [io.sarnowski.swagger1st.util.api :refer [throw-error]]
             [ring.util.response :refer :all]
-            [clojure.data.json :refer [JSONWriter]]
             [clojure.java.jdbc :as jdbc]
             [clojure.set :as set]
             [clojure.string :as str]
