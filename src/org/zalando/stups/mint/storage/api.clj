@@ -17,7 +17,7 @@
             [org.zalando.stups.friboo.log :as log]
             [org.zalando.stups.friboo.ring :refer :all]
             [org.zalando.stups.friboo.config :refer [require-config]]
-            [org.zalando.stups.friboo.user :refer [require-internal-team]]
+            [org.zalando.stups.friboo.user :as fuser]
             [org.zalando.stups.friboo.system.http :refer [def-http-component]]
             [org.zalando.stups.mint.storage.external.apps :refer [get-app]]
             [org.zalando.stups.mint.storage.external.scopes :refer [get-scope]]
@@ -151,6 +151,28 @@
        (map deref)
        doall))
 
+(defn require-write-access-for
+  "Requires humans to be in same team and robots additionally to have application.write_sensitive scope.
+   Returns team if all is good, throws otherwise."
+  [team request]
+  ; first check for employees or services realm
+  (fuser/require-internal-user request)
+  ; require team depending on realm
+  (let [tokeninfo (:tokeninfo request)
+        realm (get tokeninfo "realm")
+        user (get tokeninfo "uid")
+        has-scope? (set (get tokeninfo "scope"))]
+    (case realm
+      "/services" (if (has-scope? "application.write_sensitive")
+                    ; if has scope, require same team
+                    (fuser/require-service-team team request)
+                    ; else throw
+                    (throw-error 403
+                                 (str "Service user " user " is missing required scope.")
+                                 {:user-id user}))
+      "/employees" (fuser/require-team team request))
+    team))
+
 (defn create-or-update-application
   "Creates or updates an appliction. If no s3 buckets are given, deletes the application."
   [{:keys [application_id application]} {:keys [configuration tokeninfo] :as request} db mint-config]
@@ -161,10 +183,12 @@
         (let [access-token (get tokeninfo "access_token")
               kio-url (require-config configuration :kio-url)
               essentials-url (require-config configuration :essentials-url)
-              app (require-app application_id kio-url access-token)
-              team (future (require-internal-team (:team_id app) request))]
-          (require-scopes new-scopes essentials-url access-token)
-          @team)
+              app (require-app application_id kio-url access-token)]
+          (require-write-access-for (:team_id app)
+                                    request)
+          (require-scopes new-scopes
+                          essentials-url
+                          access-token))
         (catch ExecutionException e
           (throw (.getCause e))))
       (log/warn "Could not perform further validation, because security was disabled (no HTTP_TOKENINFO_URL set)"))
