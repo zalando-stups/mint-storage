@@ -10,7 +10,7 @@
 
 (def human-token
   {"uid" "mister-blue"
-   "realm" "/employees"
+   "realm" "employees"
    "scope" ["uid"]})
 
 (def robot-token

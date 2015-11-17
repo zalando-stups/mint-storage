@@ -159,18 +159,21 @@
   (fuser/require-internal-user request)
   ; require team depending on realm
   (let [tokeninfo (:tokeninfo request)
+        service-realm? #{"services" "/services"}
+        employee-realm? #{"employees" "/employees"}
         realm (get tokeninfo "realm")
         user (get tokeninfo "uid")
         has-scope? (set (get tokeninfo "scope"))]
-    (case realm
-      "/services" (if (has-scope? "application.write_sensitive")
-                    ; if has scope, require same team
-                    (fuser/require-service-team team request)
-                    ; else throw
-                    (throw-error 403
-                                 (str "Service user " user " is missing required scope.")
-                                 {:user-id user}))
-      "/employees" (fuser/require-team team request))
+    (when (service-realm? realm)
+      (if (has-scope? "application.write_sensitive")
+        ; if has scope, require same team
+        (fuser/require-service-team team request)
+        ; else throw
+        (throw-error 403
+                     (str "Service user " user " is missing required scope.")
+                     {:user-id user})))
+    (when (employee-realm? realm)
+      (fuser/require-team team request))
     team))
 
 (defn create-or-update-application
