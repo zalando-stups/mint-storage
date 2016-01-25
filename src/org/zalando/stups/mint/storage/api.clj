@@ -178,7 +178,7 @@
 
 (defn create-or-update-application
   "Creates or updates an appliction. If no s3 buckets are given, deletes the application."
-  [{:keys [application_id application]} {:keys [configuration tokeninfo] :as request} db mint-config]
+  [{:keys [application_id application]} {:keys [configuration tokeninfo] :as request} db _]
   (log/debug "Creating or updating application %s with %s..." application_id application)
   (let [new-scopes (apply sorted-set-by scopes-compared (:scopes application))]
     (if tokeninfo
@@ -205,7 +205,7 @@
           ; check app base information
           (let [db-app (load-application application_id db)
                 new-s3-buckets (apply sorted-set (:s3_buckets application))
-                prefix (:username-prefix mint-config)
+                prefix (:username-prefix configuration)
                 username (if prefix (str prefix application_id) application_id)]
             ; sync app
             (if db-app
