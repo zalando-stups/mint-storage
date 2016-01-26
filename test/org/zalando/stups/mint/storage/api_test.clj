@@ -6,6 +6,7 @@
 
 (def test-config
   {:team-service-url "https://example.org"
+   :kio-url "https://example.org"
    :service-user-url "https://example.org"})
 
 (def human-token
