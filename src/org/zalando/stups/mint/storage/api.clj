@@ -30,7 +30,7 @@
   (:import (java.util.concurrent ExecutionException)))
 
 ; define the API component and its dependencies
-(def-http-component API "api/mint-api.yaml" [db config])
+(def-http-component API "api/mint-api.yaml" [db])
 
 (def default-http-configuration
   {:http-port 8080})
@@ -81,7 +81,7 @@
 
 (defn read-applications
   "Returns all application configurations."
-  [{:keys [resource_type_id scope_id]} _ db _]
+  [{:keys [resource_type_id scope_id]} _ db]
   (let [db-result
         (if (or resource_type_id scope_id)
           (do (log/debug "Reading application configurations with resource_type %s and scope %s..."
@@ -100,7 +100,7 @@
 
 (defn read-application
   "Returns detailed information about one application configuration."
-  [{:keys [application_id]} _ db _]
+  [{:keys [application_id]} _ db]
   (log/debug "Reading information about application %s..." application_id)
   (if-let [app (load-application application_id db)]
     (let [app (select-keys app [:id
@@ -178,7 +178,7 @@
 
 (defn create-or-update-application
   "Creates or updates an appliction. If no s3 buckets are given, deletes the application."
-  [{:keys [application_id application]} {:keys [configuration tokeninfo] :as request} db mint-config]
+  [{:keys [application_id application]} {:keys [configuration tokeninfo] :as request} db]
   (log/debug "Creating or updating application %s with %s..." application_id application)
   (let [new-scopes (apply sorted-set-by scopes-compared (:scopes application))]
     (if tokeninfo
@@ -205,7 +205,7 @@
           ; check app base information
           (let [db-app (load-application application_id db)
                 new-s3-buckets (apply sorted-set (:s3_buckets application))
-                prefix (:username-prefix mint-config)
+                prefix (:username-prefix configuration)
                 username (if prefix (str prefix application_id) application_id)]
             ; sync app
             (if db-app
@@ -244,7 +244,7 @@
 
 (defn update-application-status
   "Updates an existing application."
-  [{:keys [application_id status]} _ db _]
+  [{:keys [application_id status]} _ db]
   (log/debug "Update application status %s ..." application_id)
   (if (pos? (sql/cmd-update-application-status! {:application_id         application_id
                                                  :client_id              (:client_id status)
@@ -261,7 +261,7 @@
 
 (defn delete-application
   "Deletes an application configuration."
-  [{:keys [application_id]} _ db _]
+  [{:keys [application_id]} _ db]
   (log/debug "Delete application %s ..." application_id)
   (let [deleted (pos? (sql/cmd-delete-application! {:application_id application_id} {:connection db}))]
     (if deleted
@@ -271,7 +271,7 @@
 
 (defn renew-credentials!
   "Issues an update of client and user credentials."
-  [{:keys [application_id]} _ db _]
+  [{:keys [application_id]} _ db]
   (if (load-application application_id db)
       (do (sql/cmd-renew-credentials! {:application_id application_id} {:connection db})
           (log/info "Issued renewal of credentials for %s" application_id)

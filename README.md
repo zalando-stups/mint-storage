@@ -24,7 +24,7 @@ Configuration is provided via environment variables during start.
 
 Variable                | Mandatory? | Default                 | Description
 ----------------------- | ---------- | ----------------------- | -----------
-MINT_USERNAME_PREFIX    | no         |                         | Prefix for the user id of the service user. E.g. app-id: `kio` and prefix: `stups_` will result in `stups_kio`
+HTTP_USERNAME_PREFIX    | no         |                         | Prefix for the user id of the service user. E.g. app-id: `kio` and prefix: `stups_` will result in `stups_kio`
 HTTP_PORT               | yes        | `8080`                  | TCP port to provide the HTTP API.
 HTTP_CORS_ORIGIN        | yes        |                         | Domain for cross-origin JavaScript requests. If set, the Access-Control headers will be set.
 HTTP_TOKENINFO_URL      | no         |                         | Mandatory to enable OAuth 2.0 security! Incoming access tokens will be verified using this endpoint
