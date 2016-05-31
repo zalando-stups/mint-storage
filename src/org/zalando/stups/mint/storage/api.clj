@@ -151,27 +151,36 @@
        (map deref)
        doall))
 
+(defn parse-comma-separated [string]
+  (str/split string #","))
+
 (defn require-write-access-for
   "Requires humans to be in same team and robots additionally to have application.write_sensitive scope.
+   application.write_all_sensitive grants general access (regardless of the team), but is only allowed for certain UIDs.
    Returns team if all is good, throws otherwise."
   [team request]
   ; first check for employees or services realm
   (fuser/require-internal-user request)
   ; require team depending on realm
-  (let [tokeninfo (:tokeninfo request)
-        service-realm? #{"services" "/services"}
+  (let [tokeninfo       (:tokeninfo request)
+        allowed-uids    (require-config (:configuration request) :allowed-uids)
+        uid-allowed?    (set (parse-comma-separated allowed-uids))
+        service-realm?  #{"services" "/services"}
         employee-realm? #{"employees" "/employees"}
-        realm (get tokeninfo "realm")
-        user (get tokeninfo "uid")
-        has-scope? (set (get tokeninfo "scope"))]
+        realm           (get tokeninfo "realm")
+        user            (get tokeninfo "uid")
+        has-scope?      (set (get tokeninfo "scope"))]
     (when (service-realm? realm)
-      (if (has-scope? "application.write_sensitive")
-        ; if has scope, require same team
-        (fuser/require-service-team team request)
-        ; else throw
-        (throw-error 403
-                     (str "Service user " user " is missing required scope.")
-                     {:user-id user})))
+      (cond
+        ; check for general access
+        (and (has-scope? "application.write_all_sensitive") (uid-allowed? user)) :grant-access
+
+        ; if has team-bound scope, require same team
+        (has-scope? "application.write_sensitive") (fuser/require-service-team team request)
+
+        :else (throw-error 403
+                           (str "Service user " user " is missing required scope.")
+                           {:user-id user})))
     (when (employee-realm? realm)
       (fuser/require-team team request))
     team))
