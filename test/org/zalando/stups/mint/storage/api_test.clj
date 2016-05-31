@@ -6,8 +6,9 @@
 
 (def test-config
   {:team-service-url "https://example.org"
-   :kio-url "https://example.org"
-   :service-user-url "https://example.org"})
+   :kio-url          "https://example.org"
+   :service-user-url "https://example.org"
+   :allowed-uids     "robo1,robo2"})
 
 (def human-token
   {"uid" "mister-blue"
@@ -18,6 +19,21 @@
   {"uid" "robo"
    "realm" "/services"
    "scope" ["uid" "application.write_sensitive"]})
+
+(def robo1-token
+  {"uid"   "robo1"
+   "realm" "/services"
+   "scope" ["uid" "application.write_all_sensitive"]})
+
+(def robo2-token
+  {"uid"   "robo2"
+   "realm" "/services"
+   "scope" ["uid"]})
+
+(def robo3-token
+  {"uid"   "robo3"
+   "realm" "/services"
+   "scope" ["uid" "application.write_all_sensitive"]})
 
 (deftest require-write-authorization
   (testing "a human needs to be in correct team"
@@ -56,6 +72,32 @@
     (let [request {:configuration test-config
                    :tokeninfo robot-token}]
       (with-redefs [fuser/get-service-team (constantly "police")]
+        (try
+          (api/require-write-access-for "dogs" request)
+          (is false)
+          (catch Exception ex
+            (same! 403 (:http-code (ex-data ex))))))))
+
+  (testing "a white-listed robot with write_all scope has write permissions"
+    (let [request {:configuration test-config
+                   :tokeninfo     robo1-token}]
+      (with-redefs [fuser/get-service-team (constantly "cats")]
+        (api/require-write-access-for "dogs" request))))
+
+  (testing "a robot with write_all scope, but not white-listed, has no write permissions"
+    (let [request {:configuration test-config
+                   :tokeninfo     robo2-token}]
+      (with-redefs [fuser/get-service-team (constantly "cats")]
+        (try
+          (api/require-write-access-for "dogs" request)
+          (is false)
+          (catch Exception ex
+            (same! 403 (:http-code (ex-data ex))))))))
+
+  (testing "a white-listed robot without the write_all scope, has no write permissions"
+    (let [request {:configuration test-config
+                   :tokeninfo     robo3-token}]
+      (with-redefs [fuser/get-service-team (constantly "cats")]
         (try
           (api/require-write-access-for "dogs" request)
           (is false)
