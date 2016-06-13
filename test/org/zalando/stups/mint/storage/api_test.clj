@@ -1,6 +1,6 @@
 (ns org.zalando.stups.mint.storage.api-test
   (:require [clojure.test :refer :all]
-            [org.zalando.stups.friboo.user :as fuser]
+            [org.zalando.stups.friboo.auth :as auth]
             [org.zalando.stups.mint.storage.api :as api]
             [org.zalando.stups.mint.test-utils :refer :all]))
 
@@ -12,7 +12,7 @@
 
 (def human-token
   {"uid" "mister-blue"
-   "realm" "employees"
+   "realm" "/employees"
    "scope" ["uid"]})
 
 (def robot-token
@@ -39,13 +39,13 @@
   (testing "a human needs to be in correct team"
     (let [request {:configuration test-config
                    :tokeninfo human-token}]
-      (with-redefs [fuser/get-teams (constantly [{:name "dogs"}])]
+      (with-redefs [auth/get-auth (constantly true)]
         (api/require-write-access-for "dogs" request))))
 
   (testing "a human cannot write without proper team membership"
     (let [request {:configuration test-config
                    :tokeninfo human-token}]
-      (with-redefs [fuser/get-teams (constantly [{:name "police"}])]
+      (with-redefs [auth/get-auth (constantly false)]
         (try
           (api/require-write-access-for "dogs" request)
           (is false)
@@ -55,13 +55,13 @@
   (testing "a robot needs to be in correct team and have write scope"
     (let [request {:configuration test-config
                    :tokeninfo robot-token}]
-      (with-redefs [fuser/get-service-team (constantly "dogs")]
+      (with-redefs [auth/get-auth (constantly true)]
         (api/require-write-access-for "dogs" request))))
 
   (testing "a robot cannot write without scope"
     (let [request {:configuration test-config
                    :tokeninfo (assoc robot-token "scope" ["uid"])}]
-      (with-redefs [fuser/get-service-team (constantly "dogs")]
+      (with-redefs [auth/get-auth (constantly true)]
         (try
           (api/require-write-access-for "dogs" request)
           (is false)
@@ -71,7 +71,7 @@
   (testing "a robot cannot write without proper team membership"
     (let [request {:configuration test-config
                    :tokeninfo robot-token}]
-      (with-redefs [fuser/get-service-team (constantly "police")]
+      (with-redefs [auth/get-auth (constantly false)]
         (try
           (api/require-write-access-for "dogs" request)
           (is false)
@@ -81,13 +81,13 @@
   (testing "a white-listed robot with write_all scope has write permissions"
     (let [request {:configuration test-config
                    :tokeninfo     robo1-token}]
-      (with-redefs [fuser/get-service-team (constantly "cats")]
+      (with-redefs [auth/get-auth (constantly false)]
         (api/require-write-access-for "dogs" request))))
 
   (testing "a robot with write_all scope, but not white-listed, has no write permissions"
     (let [request {:configuration test-config
                    :tokeninfo     robo2-token}]
-      (with-redefs [fuser/get-service-team (constantly "cats")]
+      (with-redefs [auth/get-auth (constantly false)]
         (try
           (api/require-write-access-for "dogs" request)
           (is false)
@@ -97,7 +97,7 @@
   (testing "a white-listed robot without the write_all scope, has no write permissions"
     (let [request {:configuration test-config
                    :tokeninfo     robo3-token}]
-      (with-redefs [fuser/get-service-team (constantly "cats")]
+      (with-redefs [auth/get-auth (constantly false)]
         (try
           (api/require-write-access-for "dogs" request)
           (is false)

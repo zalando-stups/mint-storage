@@ -161,17 +161,17 @@
    Returns team if all is good, throws otherwise."
   [team request]
   ; first check for employees or services realm
-  (fuser/require-internal-user request)
+  (fuser/require-realms #{"services" "employees"} request)
   ; require team depending on realm
   (let [tokeninfo       (:tokeninfo request)
         allowed-uids    (require-config (:configuration request) :allowed-uids)
         uid-allowed?    (set (parse-comma-separated allowed-uids))
-        service-realm?  #{"services" "/services"}
-        employee-realm? #{"employees" "/employees"}
         realm           (get tokeninfo "realm")
         user            (get tokeninfo "uid")
-        has-scope?      (set (get tokeninfo "scope"))]
-    (when (service-realm? realm)
+        has-scope?      (set (get tokeninfo "scope"))
+        service-realm?  (= "/services" realm)
+        employee-realm? (= "/employees" realm)]
+    (when service-realm?
       (cond
         ; check for general access
         (and (has-scope? "application.write_all_sensitive") (uid-allowed? user)) :grant-access
@@ -182,7 +182,7 @@
         :else (throw-error 403
                            (str "Service user " user " is missing required scope.")
                            {:user-id user})))
-    (when (employee-realm? realm)
+    (when employee-realm?
       (auth/require-auth request team))
     team))
 
