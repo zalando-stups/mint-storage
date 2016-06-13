@@ -18,6 +18,7 @@
             [org.zalando.stups.friboo.ring :refer :all]
             [org.zalando.stups.friboo.config :refer [require-config]]
             [org.zalando.stups.friboo.user :as fuser]
+            [org.zalando.stups.friboo.auth :as auth]
             [org.zalando.stups.friboo.system.http :refer [def-http-component]]
             [org.zalando.stups.mint.storage.external.apps :refer [get-app]]
             [org.zalando.stups.mint.storage.external.scopes :refer [get-scope]]
@@ -176,13 +177,13 @@
         (and (has-scope? "application.write_all_sensitive") (uid-allowed? user)) :grant-access
 
         ; if has team-bound scope, require same team
-        (has-scope? "application.write_sensitive") (fuser/require-service-team team request)
+        (has-scope? "application.write_sensitive") (auth/require-auth request team)
 
         :else (throw-error 403
                            (str "Service user " user " is missing required scope.")
                            {:user-id user})))
     (when (employee-realm? realm)
-      (fuser/require-team team request))
+      (auth/require-auth request team))
     team))
 
 (defn create-or-update-application
