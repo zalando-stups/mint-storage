@@ -7,8 +7,8 @@
 
   :min-lein-version "2.0.0"
 
-  :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.zalando.stups/friboo "1.6.0"]
+  :dependencies [[org.clojure/clojure "1.8.0"]
+                 [org.zalando.stups/friboo "1.9.0"]
                  [yesql "0.5.1"]]
 
   :main ^:skip-aot org.zalando.stups.mint.storage.core
