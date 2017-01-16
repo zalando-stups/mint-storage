@@ -42,7 +42,7 @@ paths:
           type: string
           description: ID of a resource type. Filters output to all applications, that use this resource type.
           required: false
-          pattern: "^[a-z][a-z0-9-_]*[a-z0-9]$"
+          pattern: "^[a-z][a-z0-9-_]*(?:\\.[a-z0-9-_]*)?[a-z0-9]$"
         - name: scope_id
           in: query
           type: string
