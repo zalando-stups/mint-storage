@@ -53,7 +53,7 @@
                (fn [[k v]] [(remove-prefix k) v])
                m))))
 
-(defn- parse-s3-buckets
+(defn- parse-set
   "Splits a comma-separated string into a sorted set"
   [string]
   (if string
@@ -73,11 +73,12 @@
   (when-first [row (sql/cmd-read-application {:application_id application_id} {:connection db})]
     (-> row
         strip-prefix
-        (update-in [:s3_buckets] parse-s3-buckets)
+        (update-in [:s3_buckets] parse-set)
         (update-in [:last_synced] from-sql-time)
         (update-in [:last_modified] from-sql-time)
         (update-in [:last_client_rotation] from-sql-time)
         (update-in [:last_password_rotation] from-sql-time)
+        (update-in [:redirect_urls] parse-set)
         (assoc :scopes (load-scopes application_id db)))))
 
 (defn read-applications
