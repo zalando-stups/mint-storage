@@ -316,7 +316,7 @@ definitions:
           Which redirect URL is considered valid during the OAuth 2.0 implicit flow. Invalid redirect URLS are
           not permitted
         example: https://yourturn.stups.example.org
-        pattern: "^https:\\/\\/.*$"
+        pattern: "^(https:\\/\\/.*|http:\\/\\/(localhost|docker)(:|\\/)).*$"
       is_client_confidential:
         type: boolean
         description: |
