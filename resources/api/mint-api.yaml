@@ -170,6 +170,14 @@ paths:
                   Which redirect URL is considered valid during the OAuth 2.0 implicit flow. Invalid redirect URLS are
                   not permitted
                 example: https://yourturn.stups.example.org
+              redirect_urls:
+                type: array
+                description: |
+                  Which redirect URLs are considered valid during the OAuth 2.0 implicit flow. Invalid redirect URLs are
+                  not permitted
+                items:
+                  type: string
+                  example: https://yourturn.stups.example.org
               is_client_confidential:
                 type: boolean
                 description: |
@@ -313,10 +321,19 @@ definitions:
       redirect_url:
         type: string
         description: |
-          Which redirect URL is considered valid during the OAuth 2.0 implicit flow. Invalid redirect URLS are
+          Which redirect URL is considered valid during the OAuth 2.0 implicit flow. Invalid redirect URLs are
           not permitted
         example: https://yourturn.stups.example.org
-        pattern: "^https:\\/\\/.*$"
+        pattern: "^(https:\\/\\/.*|http:\\/\\/localhost(\\/.*)?)$"
+      redirect_urls:
+        type: array
+        description: |
+          Which redirect URLs are considered valid during the OAuth 2.0 implicit flow. Invalid redirect URLs are
+          not permitted
+        items:
+          type: string
+          example: https://yourturn.stups.example.org
+          pattern: "^(https:\\/\\/.*|http:\\/\\/localhost(\\/.*)?)$"
       is_client_confidential:
         type: boolean
         description: |

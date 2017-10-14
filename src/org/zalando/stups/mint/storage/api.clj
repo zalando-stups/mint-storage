@@ -53,7 +53,7 @@
                (fn [[k v]] [(remove-prefix k) v])
                m))))
 
-(defn- parse-s3-buckets
+(defn- parse-set
   "Splits a comma-separated string into a sorted set"
   [string]
   (if string
@@ -73,11 +73,12 @@
   (when-first [row (sql/cmd-read-application {:application_id application_id} {:connection db})]
     (-> row
         strip-prefix
-        (update-in [:s3_buckets] parse-s3-buckets)
+        (update-in [:s3_buckets] parse-set)
         (update-in [:last_synced] from-sql-time)
         (update-in [:last_modified] from-sql-time)
         (update-in [:last_client_rotation] from-sql-time)
         (update-in [:last_password_rotation] from-sql-time)
+        (update-in [:redirect_urls] parse-set)
         (assoc :scopes (load-scopes application_id db)))))
 
 (defn read-applications
@@ -114,6 +115,7 @@
                                 :has_problems
                                 :message
                                 :redirect_url
+                                :redirect_urls
                                 :is_client_confidential
                                 :s3_errors
                                 :s3_buckets
@@ -214,6 +216,7 @@
           [connection db]
           ; check app base information
           (let [db-app (load-application application_id db)
+                new-redirect-urls (apply sorted-set (map str/lower-case (:redirect_urls application)))
                 new-s3-buckets (apply sorted-set (:s3_buckets application))
                 prefix (:username-prefix configuration)
                 username (if prefix (str prefix application_id) application_id)]
@@ -221,17 +224,20 @@
             (if db-app
               ; check for update (did anything change?)
               (when-not (and (= (:redirect_url db-app) (:redirect_url application))
+                             (= (:redirect_urls db-app) new-redirect-urls)
                              (= (:is_client_confidential db-app) (:is_client_confidential application))
                              (= (:s3_buckets db-app) new-s3-buckets)
                              (= (:scopes db-app) new-scopes))
                 (sql/cmd-update-application! {:application_id         application_id
                                           :redirect_url           (:redirect_url application)
+                                          :redirect_urls          (str/join "," new-redirect-urls)
                                           :is_client_confidential (:is_client_confidential application)
                                           :s3_buckets             (str/join "," new-s3-buckets)}
                                          {:connection connection}))
               ; create new app
               (sql/cmd-create-application! {:application_id         application_id
                                         :redirect_url           (:redirect_url application)
+                                        :redirect_urls          (str/join "," new-redirect-urls)
                                         :is_client_confidential (:is_client_confidential application)
                                         :s3_buckets             (str/join "," new-s3-buckets)
                                         :username               username}
