@@ -29,7 +29,3 @@
 (defmacro true!
   [x]
   `(same! true ~x))
-
-(defmacro instance!
-  [x y]
-  `(is (instance? ~x ~y)))
