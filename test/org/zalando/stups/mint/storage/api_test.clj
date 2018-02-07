@@ -1,22 +1,25 @@
 (ns org.zalando.stups.mint.storage.api-test
   (:require [clojure.test :refer :all]
+            [org.zalando.stups.friboo.log :as log]
             [org.zalando.stups.friboo.auth :as auth]
             [org.zalando.stups.mint.storage.api :as api]
+            [org.zalando.stups.friboo.system :as system]
             [org.zalando.stups.mint.test-utils :refer :all]))
 
 (def test-config
-  {:team-service-url "https://example.org"
-   :kio-url          "https://example.org"
-   :service-user-url "https://example.org"
+  {:team-service-url "http://localhost"
+   :kio-url          "http://localhost"
+   :essentials-url   "http://localhost"
+   :service-user-url "http://localhost"
    :allowed-uids     "robo1,robo2"})
 
 (def human-token
-  {"uid" "mister-blue"
+  {"uid"   "mister-blue"
    "realm" "/employees"
    "scope" ["uid"]})
 
 (def robot-token
-  {"uid" "robo"
+  {"uid"   "robo"
    "realm" "/services"
    "scope" ["uid" "application.write_sensitive"]})
 
@@ -35,16 +38,57 @@
    "realm" "/services"
    "scope" ["uid" "application.write_all_sensitive"]})
 
+(deftest application-lifecycle
+  (let [test-application {:application_id "test-application"
+                          :application    {:s3_buckets             ["a-bucket"]
+                                           :is_client_confidential true
+                                           :scopes [{:resource_type_id "resource"
+                                                    :scope_id "scope"}]}}
+        context {:configuration test-config
+                 :tokeninfo     robot-token}]
+    (with-db [db]
+             (testing "404 when application does not exist"
+               (let [unknown-application {:application_id "unknown-application"}
+                     response (api/read-application unknown-application {} db)]
+                 (same! 404 (:status response))))
+
+             (testing "created application is stored and can be retrieved, updated and deleted"
+               (with-redefs [api/require-scopes (constantly nil)
+                             api/require-app (constantly {})]
+                 (do (let [response (api/create-or-update-application test-application context db)]
+                       (same! 200 (:status response)))
+
+                     (let [response (api/read-application test-application {} db)]
+                       (same! 200 (:status response))
+                       (same! #{"a-bucket"} (:s3_buckets (:body response)))
+                       (true! (:is_client_confidential (:body response)))
+                       (same! #{{:resource_type_id "resource" :scope_id "scope"}} (:scopes (:body response))))
+
+                     (let [no-buckets (assoc test-application :application (assoc (:application test-application) :s3_buckets []))
+                           response (api/create-or-update-application no-buckets context db)]
+                       (same! 200 (:status response)))
+
+                     (let [response (api/read-application test-application {} db)]
+                       (same! 200 (:status response))
+                       (same! #{} (:s3_buckets (:body response)))
+                       (true! (:is_client_confidential (:body response))))
+
+                     (let [response (api/delete-application test-application {} db)]
+                       (same! 200 (:status response)))
+
+                     (let [response (api/read-application test-application {} db)]
+                       (same! 404 (:status response)))))))))
+
 (deftest require-write-authorization
   (testing "a human needs to be in correct team"
     (let [request {:configuration test-config
-                   :tokeninfo human-token}]
+                   :tokeninfo     human-token}]
       (with-redefs [auth/get-auth (constantly true)]
         (api/require-write-access-for "dogs" request))))
 
   (testing "a human cannot write without proper team membership"
     (let [request {:configuration test-config
-                   :tokeninfo human-token}]
+                   :tokeninfo     human-token}]
       (with-redefs [auth/get-auth (constantly false)]
         (try
           (api/require-write-access-for "dogs" request)
@@ -54,13 +98,13 @@
 
   (testing "a robot needs to be in correct team and have write scope"
     (let [request {:configuration test-config
-                   :tokeninfo robot-token}]
+                   :tokeninfo     robot-token}]
       (with-redefs [auth/get-auth (constantly true)]
         (api/require-write-access-for "dogs" request))))
 
   (testing "a robot cannot write without scope"
     (let [request {:configuration test-config
-                   :tokeninfo (assoc robot-token "scope" ["uid"])}]
+                   :tokeninfo     (assoc robot-token "scope" ["uid"])}]
       (with-redefs [auth/get-auth (constantly true)]
         (try
           (api/require-write-access-for "dogs" request)
@@ -70,7 +114,7 @@
 
   (testing "a robot cannot write without proper team membership"
     (let [request {:configuration test-config
-                   :tokeninfo robot-token}]
+                   :tokeninfo     robot-token}]
       (with-redefs [auth/get-auth (constantly false)]
         (try
           (api/require-write-access-for "dogs" request)

@@ -187,7 +187,7 @@
     team))
 
 (defn create-or-update-application
-  "Creates or updates an appliction. If no s3 buckets are given, deletes the application."
+  "Creates or updates an appliction."
   [{:keys [application_id application]} {:keys [configuration tokeninfo] :as request} db]
   (log/debug "Creating or updating application %s with %s..." application_id application)
   (let [new-scopes (apply sorted-set-by scopes-compared (:scopes application))]
@@ -205,51 +205,47 @@
         (catch ExecutionException e
           (throw (.getCause e))))
       (log/warn "Could not perform further validation, because security was disabled (no HTTP_TOKENINFO_URL set)"))
-    (if (empty? (:s3_buckets application))
-      (do
-        (sql/cmd-delete-application! {:application_id application_id} {:connection db})
-        (log/info "Deleted application %s because no s3 buckets were given." application_id))
-      (do
-        (jdbc/with-db-transaction
-          [connection db]
-          ; check app base information
-          (let [db-app (load-application application_id db)
-                new-s3-buckets (apply sorted-set (:s3_buckets application))
-                prefix (:username-prefix configuration)
-                username (if prefix (str prefix application_id) application_id)]
-            ; sync app
-            (if db-app
-              ; check for update (did anything change?)
-              (when-not (and (= (:redirect_url db-app) (:redirect_url application))
-                             (= (:is_client_confidential db-app) (:is_client_confidential application))
-                             (= (:s3_buckets db-app) new-s3-buckets)
-                             (= (:scopes db-app) new-scopes))
-                (sql/cmd-update-application! {:application_id         application_id
+    (do
+      (jdbc/with-db-transaction
+        [connection db]
+        ; check app base information
+        (let [db-app (load-application application_id db)
+              new-s3-buckets (apply sorted-set (:s3_buckets application))
+              prefix (:username-prefix configuration)
+              username (if prefix (str prefix application_id) application_id)]
+          ; sync app
+          (if db-app
+            ; check for update (did anything change?)
+            (when-not (and (= (:redirect_url db-app) (:redirect_url application))
+                           (= (:is_client_confidential db-app) (:is_client_confidential application))
+                           (= (:s3_buckets db-app) new-s3-buckets)
+                           (= (:scopes db-app) new-scopes))
+              (sql/cmd-update-application! {:application_id         application_id
+                                            :redirect_url           (:redirect_url application)
+                                            :is_client_confidential (:is_client_confidential application)
+                                            :s3_buckets             (str/join "," new-s3-buckets)}
+                                       {:connection connection}))
+            ; create new app
+            (sql/cmd-create-application! {:application_id         application_id
                                           :redirect_url           (:redirect_url application)
                                           :is_client_confidential (:is_client_confidential application)
-                                          :s3_buckets             (str/join "," new-s3-buckets)}
-                                         {:connection connection}))
-              ; create new app
-              (sql/cmd-create-application! {:application_id         application_id
-                                        :redirect_url           (:redirect_url application)
-                                        :is_client_confidential (:is_client_confidential application)
-                                        :s3_buckets             (str/join "," new-s3-buckets)
-                                        :username               username}
-                                       {:connection connection}))
-            ; sync scopes
-            (let [scopes-to-be-created (set/difference new-scopes (:scopes db-app))
-                  scopes-to-be-deleted (set/difference (:scopes db-app) new-scopes)]
-              (doseq [scope scopes-to-be-created]
-                (sql/cmd-create-scope! {:application_id   application_id
-                                    :resource_type_id (:resource_type_id scope)
-                                    :scope_id         (:scope_id scope)}
-                                   {:connection connection}))
-              (doseq [scope scopes-to-be-deleted]
-                (sql/cmd-delete-scope! {:application_id   application_id
-                                    :resource_type_id (:resource_type_id scope)
-                                    :scope_id         (:scope_id scope)}
-                                   {:connection connection})))))
-        (log/info "Updated application %s with %s." application_id application))))
+                                          :s3_buckets             (str/join "," new-s3-buckets)
+                                          :username               username}
+                                     {:connection connection}))
+          ; sync scopes
+          (let [scopes-to-be-created (set/difference new-scopes (:scopes db-app))
+                scopes-to-be-deleted (set/difference (:scopes db-app) new-scopes)]
+            (doseq [scope scopes-to-be-created]
+              (sql/cmd-create-scope! {:application_id   application_id
+                                      :resource_type_id (:resource_type_id scope)
+                                      :scope_id         (:scope_id scope)}
+                                 {:connection connection}))
+            (doseq [scope scopes-to-be-deleted]
+              (sql/cmd-delete-scope! {:application_id   application_id
+                                      :resource_type_id (:resource_type_id scope)
+                                      :scope_id         (:scope_id scope)}
+                                 {:connection connection})))))
+      (log/info "Updated application %s with %s." application_id application)))
   (response nil))
 
 (defn update-application-status
