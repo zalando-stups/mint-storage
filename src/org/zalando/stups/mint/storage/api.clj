@@ -1,16 +1,16 @@
-; Copyright 2015 Zalando SE
-;
-; Licensed under the Apache License, Version 2.0 (the "License")
-; you may not use this file except in compliance with the License.
-; You may obtain a copy of the License at
-;
-;     http://www.apache.org/licenses/LICENSE-2.0
-;
-; Unless required by applicable law or agreed to in writing, software
-; distributed under the License is distributed on an "AS IS" BASIS,
-; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-; See the License for the specific language governing permissions and
-; limitations under the License.
+;; Copyright 2015 Zalando SE
+;;
+;; Licensed under the Apache License, Version 2.0 (the "License")
+;; you may not use this file except in compliance with the License.
+;; You may obtain a copy of the License at
+;;
+;;     http://www.apache.org/licenses/LICENSE-2.0
+;;
+;; Unless required by applicable law or agreed to in writing, software
+;; distributed under the License is distributed on an "AS IS" BASIS,
+;; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+;; See the License for the specific language governing permissions and
+;; limitations under the License.
 
 (ns org.zalando.stups.mint.storage.api
   (:require [org.zalando.stups.mint.storage.sql :as sql]
@@ -30,7 +30,7 @@
             [clj-time.coerce :refer [to-sql-time from-sql-time]])
   (:import (java.util.concurrent ExecutionException)))
 
-; define the API component and its dependencies
+;; define the API component and its dependencies
 (def-http-component API "api/mint-api.yaml" [db])
 
 (def default-http-configuration
@@ -53,7 +53,7 @@
                (fn [[k v]] [(remove-prefix k) v])
                m))))
 
-(defn- parse-s3-buckets
+(defn- parse-str-to-set
   "Splits a comma-separated string into a sorted set"
   [string]
   (if string
@@ -71,9 +71,11 @@
 (defn- load-application
   [application_id db]
   (when-first [row (sql/cmd-read-application {:application_id application_id} {:connection db})]
+    (clojure.pprint/pprint row)
     (-> row
         strip-prefix
-        (update-in [:s3_buckets] parse-s3-buckets)
+        (update-in [:s3_buckets] parse-str-to-set)
+        (update-in [:kubernetes_clusters] parse-str-to-set)
         (update-in [:last_synced] from-sql-time)
         (update-in [:last_modified] from-sql-time)
         (update-in [:last_client_rotation] from-sql-time)
@@ -117,6 +119,7 @@
                                 :is_client_confidential
                                 :s3_errors
                                 :s3_buckets
+                                :kubernetes_clusters
                                 :scopes])]
       (log/debug "Found application %s with %s." application_id app)
       (content-type-json (response app)))
@@ -160,9 +163,9 @@
    application.write_all_sensitive grants general access (regardless of the team), but is only allowed for certain UIDs.
    Returns team if all is good, throws otherwise."
   [team request]
-  ; first check for employees or services realm
+  ;; first check for employees or services realm
   (fuser/require-realms #{"services" "employees"} request)
-  ; require team depending on realm
+  ;; require team depending on realm
   (let [tokeninfo       (:tokeninfo request)
         allowed-uids    (require-config (:configuration request) :allowed-uids)
         uid-allowed?    (set (parse-comma-separated allowed-uids))
@@ -173,10 +176,10 @@
         employee-realm? (= "/employees" realm)]
     (when service-realm?
       (cond
-        ; check for general access
+        ;; check for general access
         (and (has-scope? "application.write_all_sensitive") (uid-allowed? user)) :grant-access
 
-        ; if has team-bound scope, require same team
+        ;; if has team-bound scope, require same team
         (has-scope? "application.write_sensitive") (auth/require-auth request team)
 
         :else (throw-error 403
@@ -193,10 +196,10 @@
   (let [new-scopes (apply sorted-set-by scopes-compared (:scopes application))]
     (if tokeninfo
       (try
-        (let [access-token (get tokeninfo "access_token")
-              kio-url (require-config configuration :kio-url)
+        (let [access-token   (get tokeninfo "access_token")
+              kio-url        (require-config configuration :kio-url)
               essentials-url (require-config configuration :essentials-url)
-              app (require-app application_id kio-url access-token)]
+              app            (require-app application_id kio-url access-token)]
           (require-write-access-for (:team_id app)
                                     request)
           (require-scopes new-scopes
@@ -208,43 +211,47 @@
     (do
       (jdbc/with-db-transaction
         [connection db]
-        ; check app base information
-        (let [db-app (load-application application_id db)
-              new-s3-buckets (apply sorted-set (:s3_buckets application))
-              prefix (:username-prefix configuration)
-              username (if prefix (str prefix application_id) application_id)]
-          ; sync app
+        ;; check app base information
+        (let [db-app           (load-application application_id db)
+              new-s3-buckets   (apply sorted-set (:s3_buckets application))
+              new-k8s-clusters (apply sorted-set (:kubernetes_clusters application))
+              prefix           (:username-prefix configuration)
+              username         (if prefix (str prefix application_id) application_id)]
+          ;; sync app
           (if db-app
-            ; check for update (did anything change?)
+            ;; update existing app
             (when-not (and (= (:redirect_url db-app) (:redirect_url application))
                            (= (:is_client_confidential db-app) (:is_client_confidential application))
                            (= (:s3_buckets db-app) new-s3-buckets)
+                           (= (:kubernetes_clusters db-app) new-k8s-clusters)
                            (= (:scopes db-app) new-scopes))
               (sql/cmd-update-application! {:application_id         application_id
                                             :redirect_url           (:redirect_url application)
                                             :is_client_confidential (:is_client_confidential application)
-                                            :s3_buckets             (str/join "," new-s3-buckets)}
-                                       {:connection connection}))
-            ; create new app
+                                            :s3_buckets             (str/join "," new-s3-buckets)
+                                            :kubernetes_clusters    (str/join "," new-k8s-clusters)}
+                                           {:connection connection}))
+            ;; create new app
             (sql/cmd-create-application! {:application_id         application_id
                                           :redirect_url           (:redirect_url application)
                                           :is_client_confidential (:is_client_confidential application)
                                           :s3_buckets             (str/join "," new-s3-buckets)
+                                          :kubernetes_clusters    (str/join "," new-k8s-clusters)
                                           :username               username}
-                                     {:connection connection}))
-          ; sync scopes
+                                         {:connection connection}))
+          ;; sync scopes
           (let [scopes-to-be-created (set/difference new-scopes (:scopes db-app))
                 scopes-to-be-deleted (set/difference (:scopes db-app) new-scopes)]
             (doseq [scope scopes-to-be-created]
               (sql/cmd-create-scope! {:application_id   application_id
                                       :resource_type_id (:resource_type_id scope)
                                       :scope_id         (:scope_id scope)}
-                                 {:connection connection}))
+                                     {:connection connection}))
             (doseq [scope scopes-to-be-deleted]
               (sql/cmd-delete-scope! {:application_id   application_id
                                       :resource_type_id (:resource_type_id scope)
                                       :scope_id         (:scope_id scope)}
-                                 {:connection connection})))))
+                                     {:connection connection})))))
       (log/info "Updated application %s with %s." application_id application)))
   (response nil))
 
@@ -279,7 +286,7 @@
   "Issues an update of client and user credentials."
   [{:keys [application_id]} _ db]
   (if (load-application application_id db)
-      (do (sql/cmd-renew-credentials! {:application_id application_id} {:connection db})
-          (log/info "Issued renewal of credentials for %s" application_id)
-          (response nil))
-      (not-found nil)))
+    (do (sql/cmd-renew-credentials! {:application_id application_id} {:connection db})
+        (log/info "Issued renewal of credentials for %s" application_id)
+        (response nil))
+    (not-found nil)))
