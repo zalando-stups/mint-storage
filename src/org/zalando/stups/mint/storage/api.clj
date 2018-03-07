@@ -71,7 +71,6 @@
 (defn- load-application
   [application_id db]
   (when-first [row (sql/cmd-read-application {:application_id application_id} {:connection db})]
-    (clojure.pprint/pprint row)
     (-> row
         strip-prefix
         (update-in [:s3_buckets] parse-str-to-set)
