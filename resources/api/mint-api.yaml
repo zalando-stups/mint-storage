@@ -189,10 +189,10 @@ paths:
               kubernetes_clusters:
                 type: array
                 description: |
-                  Unique cluster name(s) to where the application can be deployed.
+                  Unique cluster id(s) to where the application can be deployed.
                 items:
                   type: string
-                  example: stups
+                  example: "aws:123123123123:eu-central-1:kube-1"
               scopes:
                 type: array
                 description: |
@@ -344,10 +344,10 @@ definitions:
       kubernetes_clusters:
         type: array
         description: |
-         Unique cluster name(s) to where the application can be deployed.
+         Unique cluster id(s) to where the application can be deployed.
         items:
           type: string
-          example: stups
+          example: "aws:123123123123:eu-central-1:kube-1"
           pattern: "^[a-z][a-z0-9-:]*[a-z0-9]$"
       scopes:
         type: array

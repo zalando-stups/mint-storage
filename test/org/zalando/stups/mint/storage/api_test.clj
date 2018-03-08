@@ -41,7 +41,7 @@
 (deftest application-lifecycle
   (let [test-application {:application_id "test-application"
                           :application    {:s3_buckets             ["a-bucket"]
-                                           :kubernetes_clusters    ["cluster" "test-cluster"]
+                                           :kubernetes_clusters    ["aws:123123123123:eu-central-1:kube-1" "aws:231231231231:eu-central-1:kube-1"]
                                            :is_client_confidential true
                                            :scopes                 [{:resource_type_id "resource"
                                                                      :scope_id         "scope"}]}}
@@ -62,7 +62,7 @@
                      (let [response (api/read-application test-application {} db)]
                        (same! 200 (:status response))
                        (same! #{"a-bucket"} (:s3_buckets (:body response)))
-                       (same! #{"cluster" "test-cluster"} (:kubernetes_clusters (:body response)))
+                       (same! #{"aws:123123123123:eu-central-1:kube-1" "aws:231231231231:eu-central-1:kube-1"} (:kubernetes_clusters (:body response)))
                        (true! (:is_client_confidential (:body response)))
                        (same! #{{:resource_type_id "resource" :scope_id "scope"}} (:scopes (:body response))))
 
