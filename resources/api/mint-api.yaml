@@ -348,7 +348,7 @@ definitions:
         items:
           type: string
           example: stups
-          pattern: "^(gs://)?[a-z0-9][a-z0-9-.]{1,61}[a-z0-9]$"
+          pattern: "^[a-z][a-z0-9-:]*[a-z0-9]$"
       scopes:
         type: array
         description: |
