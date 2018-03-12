@@ -43,19 +43,19 @@
                           :application    {:s3_buckets             ["a-bucket"]
                                            :kubernetes_clusters    ["aws:123123123123:eu-central-1:kube-1" "aws:231231231231:eu-central-1:kube-1"]
                                            :is_client_confidential true
-                                           :scopes                 [{:resource_type_id "resource"
-                                                                     :scope_id         "scope"}]}}
-        context          {:configuration test-config
-                          :tokeninfo     robot-token}]
+                                           :scopes [{:resource_type_id "resource"
+                                                    :scope_id "scope"}]}}
+        context {:configuration test-config
+                 :tokeninfo     robot-token}]
     (with-db [db]
              (testing "404 when application does not exist"
                (let [unknown-application {:application_id "unknown-application"}
-                     response            (api/read-application unknown-application {} db)]
+                     response (api/read-application unknown-application {} db)]
                  (same! 404 (:status response))))
 
              (testing "created application is stored and can be retrieved, updated and deleted"
                (with-redefs [api/require-scopes (constantly nil)
-                             api/require-app    (constantly {})]
+                             api/require-app (constantly {})]
                  (do (let [response (api/create-or-update-application test-application context db)]
                        (same! 200 (:status response)))
 
@@ -67,7 +67,7 @@
                        (same! #{{:resource_type_id "resource" :scope_id "scope"}} (:scopes (:body response))))
 
                      (let [no-buckets (assoc test-application :application (assoc (:application test-application) :s3_buckets [] :kubernetes_clusters []))
-                           response   (api/create-or-update-application no-buckets context db)]
+                           response (api/create-or-update-application no-buckets context db)]
                        (same! 200 (:status response)))
 
                      (let [response (api/read-application test-application {} db)]
