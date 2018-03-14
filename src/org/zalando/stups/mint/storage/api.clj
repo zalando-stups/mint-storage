@@ -53,7 +53,7 @@
                (fn [[k v]] [(remove-prefix k) v])
                m))))
 
-(defn- parse-s3-buckets
+(defn- parse-str-to-set
   "Splits a comma-separated string into a sorted set"
   [string]
   (if string
@@ -73,7 +73,8 @@
   (when-first [row (sql/cmd-read-application {:application_id application_id} {:connection db})]
     (-> row
         strip-prefix
-        (update-in [:s3_buckets] parse-s3-buckets)
+        (update-in [:s3_buckets] parse-str-to-set)
+        (update-in [:kubernetes_clusters] parse-str-to-set)
         (update-in [:last_synced] from-sql-time)
         (update-in [:last_modified] from-sql-time)
         (update-in [:last_client_rotation] from-sql-time)
@@ -117,6 +118,7 @@
                                 :is_client_confidential
                                 :s3_errors
                                 :s3_buckets
+                                :kubernetes_clusters
                                 :scopes])]
       (log/debug "Found application %s with %s." application_id app)
       (content-type-json (response app)))
@@ -211,6 +213,7 @@
         ; check app base information
         (let [db-app (load-application application_id db)
               new-s3-buckets (apply sorted-set (:s3_buckets application))
+              new-k8s-clusters (apply sorted-set (:kubernetes_clusters application))
               prefix (:username-prefix configuration)
               username (if prefix (str prefix application_id) application_id)]
           ; sync app
@@ -219,17 +222,20 @@
             (when-not (and (= (:redirect_url db-app) (:redirect_url application))
                            (= (:is_client_confidential db-app) (:is_client_confidential application))
                            (= (:s3_buckets db-app) new-s3-buckets)
+                           (= (:kubernetes_clusters db-app) new-k8s-clusters)
                            (= (:scopes db-app) new-scopes))
               (sql/cmd-update-application! {:application_id         application_id
                                             :redirect_url           (:redirect_url application)
                                             :is_client_confidential (:is_client_confidential application)
-                                            :s3_buckets             (str/join "," new-s3-buckets)}
+                                            :s3_buckets             (str/join "," new-s3-buckets)
+                                            :kubernetes_clusters    (str/join "," new-k8s-clusters)}
                                        {:connection connection}))
             ; create new app
             (sql/cmd-create-application! {:application_id         application_id
                                           :redirect_url           (:redirect_url application)
                                           :is_client_confidential (:is_client_confidential application)
                                           :s3_buckets             (str/join "," new-s3-buckets)
+                                          :kubernetes_clusters    (str/join "," new-k8s-clusters)
                                           :username               username}
                                      {:connection connection}))
           ; sync scopes

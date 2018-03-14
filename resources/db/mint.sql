@@ -27,8 +27,8 @@ SELECT DISTINCT
 
 -- name: create-application!
 INSERT INTO zm_data.application
-            (a_id, a_redirect_url, a_is_client_confidential, a_username, a_s3_buckets, a_last_modified)
-     VALUES (:application_id, :redirect_url, :is_client_confidential, :username, :s3_buckets, now());
+(a_id, a_redirect_url, a_is_client_confidential, a_username, a_s3_buckets, a_last_modified, a_kubernetes_clusters)
+VALUES (:application_id, :redirect_url, :is_client_confidential, :username, :s3_buckets, now(), :kubernetes_clusters);
 
 -- name: read-application
 SELECT a_id,
@@ -42,6 +42,7 @@ SELECT a_id,
        a_has_problems,
        a_message,
        a_s3_buckets,
+       a_kubernetes_clusters,
        a_is_client_confidential,
        a_s3_errors
   FROM zm_data.application
@@ -51,6 +52,7 @@ SELECT a_id,
 UPDATE zm_data.application
    SET a_redirect_url = COALESCE(:redirect_url, a_redirect_url),
        a_s3_buckets = COALESCE(:s3_buckets, a_s3_buckets),
+       a_kubernetes_clusters = COALESCE(:kubernetes_clusters, a_kubernetes_clusters),
        a_is_client_confidential = COALESCE(:is_client_confidential, a_is_client_confidential),
        a_last_modified = now()
  WHERE a_id = :application_id;

@@ -39,13 +39,36 @@
    "scope" ["uid" "application.write_all_sensitive"]})
 
 (deftest application-lifecycle
+
+  (let [app-without-clusters {:application_id "clusterless-application"
+                              :application    {:s3_buckets             ["a-bucket"]
+                                               :is_client_confidential true
+                                               :scopes [{:resource_type_id "resource"
+                                                         :scope_id "scope"}]}}]
+    (with-db [db]
+      (testing "application can be created without providing clusters"
+        (with-redefs [api/require-scopes (constantly nil)
+                      api/require-app    (constantly {})]
+          (do (let [response (api/create-or-update-application app-without-clusters {:configuration test-config
+                                                                                     :tokeninfo     robot-token} db)]
+                (same! 200 (:status response)))
+
+              (let [response (api/read-application app-without-clusters {} db)]
+                (same! 200 (:status response))
+                (same! #{"a-bucket"} (:s3_buckets (:body response)))
+                (same! #{} (:kubernetes_clusters (:body response)))
+                (true! (:is_client_confidential (:body response)))
+                (same! #{{:resource_type_id "resource" :scope_id "scope"}} (:scopes (:body response)))))))))
+
   (let [test-application {:application_id "test-application"
                           :application    {:s3_buckets             ["a-bucket"]
+                                           :kubernetes_clusters    ["aws:123123123123:eu-central-1:kube-1" "aws:231231231231:eu-central-1:kube-1"]
                                            :is_client_confidential true
                                            :scopes [{:resource_type_id "resource"
                                                     :scope_id "scope"}]}}
         context {:configuration test-config
                  :tokeninfo     robot-token}]
+
     (with-db [db]
              (testing "404 when application does not exist"
                (let [unknown-application {:application_id "unknown-application"}
@@ -61,16 +84,18 @@
                      (let [response (api/read-application test-application {} db)]
                        (same! 200 (:status response))
                        (same! #{"a-bucket"} (:s3_buckets (:body response)))
+                       (same! #{"aws:123123123123:eu-central-1:kube-1" "aws:231231231231:eu-central-1:kube-1"} (:kubernetes_clusters (:body response)))
                        (true! (:is_client_confidential (:body response)))
                        (same! #{{:resource_type_id "resource" :scope_id "scope"}} (:scopes (:body response))))
 
-                     (let [no-buckets (assoc test-application :application (assoc (:application test-application) :s3_buckets []))
+                     (let [no-buckets (assoc test-application :application (assoc (:application test-application) :s3_buckets [] :kubernetes_clusters []))
                            response (api/create-or-update-application no-buckets context db)]
                        (same! 200 (:status response)))
 
                      (let [response (api/read-application test-application {} db)]
                        (same! 200 (:status response))
                        (same! #{} (:s3_buckets (:body response)))
+                       (same! #{} (:kubernetes_clusters (:body response)))
                        (true! (:is_client_confidential (:body response))))
 
                      (let [response (api/delete-application test-application {} db)]

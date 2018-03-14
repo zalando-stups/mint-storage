@@ -186,6 +186,13 @@ paths:
                 items:
                   type: string
                   example: example-org-stups-mint
+              kubernetes_clusters:
+                type: array
+                description: |
+                  Unique cluster id(s) to where the application can be deployed.
+                items:
+                  type: string
+                  example: "aws:123123123123:eu-central-1:kube-1"
               scopes:
                 type: array
                 description: |
@@ -334,6 +341,14 @@ definitions:
           type: string
           example: example-org-stups-mint
           pattern: "^(gs://)?[a-z0-9][a-z0-9-.]{1,61}[a-z0-9]$"
+      kubernetes_clusters:
+        type: array
+        description: |
+         Unique cluster id(s) to where the application can be deployed.
+        items:
+          type: string
+          example: "aws:123123123123:eu-central-1:kube-1"
+          pattern: "^[a-z][a-z0-9-:]*[a-z0-9]$"
       scopes:
         type: array
         description: |
